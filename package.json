@@ -1,6 +1,6 @@
 {
-  "name": "dff2gltf-converter",
-  "version": "0.9.3",
+  "name": "@altersdb/dff2gltf-converter",
+  "version": "0.9.4",
   "description": "3D model converter from .dff/.txd to glTF and glb",
   "homepage": "https://github.com/AlterSDB/dff2glb-converter#readme",
   "bugs": {

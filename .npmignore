@@ -1,5 +1,8 @@
 assets/
 output/
+tests/
 node-modules/
 dist/test.js
 dist/test.d.ts
+.prettierrc
+.npmrc

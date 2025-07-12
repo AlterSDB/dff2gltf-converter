@@ -3,17 +3,17 @@
 [![License](https://img.shields.io/github/license/AlterSDB/dff2gltf-converter?color=green)](https://github.com/AlterSDB/dff2gltf-converter/blob/main/LICENSE.md)  
 This module will help you convert 3D models from RenderWare format (.dff, .txd) to the modern web-compatible glTF/glB format. 
 The tool is useful for developers working with retro GTA games (GTA III, GTA San Andreas, etc.) who want to use models in modern web applications or engines.
-This module was made with [glTF-Transform](https://github.com/donmccurdy/glTF-Transform/) and [rw-parser](https://github.com/Timic3/rw-parser).  
+This module works with [rw-parser](https://github.com/Timic3/rw-parser).  
 ## Usage example:
 ### Code:
 ```js
   import fs from 'fs';
   import { DffConverter, ModelType } from 'dff2gltf-converter';
 
-  const dffBuffer = fs.readFileSync(`model.dff`);
+  const dffBuffer = fs.readFileSync(`model.dff`); // prepare your .dff and .txd as bytes buffer
   const txdBuffer = fs.readFileSync(`model.txd`);
 
-  const dffConverter = new DffConverter(dffBuffer, txdBuffer, ModelType.OBJECT); // initialize DffConverter with params
+  const dffConverter = new DffConverter(dffBuffer, txdBuffer, ModelType.OBJECT); // initialize with params
 
   const result = await dffConverter.convertDffToGltf(); 
   result.exportAs(`./output/result.glb`); // convert and export your model in .gltf or .glb
@@ -26,7 +26,8 @@ You can choose one of three model types for model conversion:
 ```
 **Notes:** 
 * Selecting the wrong type may result in unexpected output after conversion, so be sure to specify the type correctly.
-* All Cars and skins for 3/VC are currently unavailable for right conversion right now.
+* Cars and skins (III/VC) conversion are currently unavailable right now.
+
 ### CLI (Not implemented):
 ```sh
 dff2gltf [dffPath] [txdPath] [ModelType (-s, -m, -c)] [outputPath]
