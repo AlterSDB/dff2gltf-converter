@@ -41,7 +41,7 @@ export class DffConverter {
 
       DffValidator.validate(this.modelType, rwDff.versionNumber);
 
-      for (const rwGeometry of rwDff.geometryList.geometries) {
+      for (const rwGeometry of rwDff.clumps[0].geometryList.geometries) {
         this.convertGeometryData(rwGeometry);
       }
       if (this.modelType == ModelType.SKIN) {
@@ -72,9 +72,12 @@ export class DffConverter {
     const rwUvsArray: RwTextureCoordinate[] = rwTextureInfo && rwTextureInfo.length > 0 ? rwTextureInfo[0] : undefined;
     const rwVerticesArray: RwVector3[] = rwGeometry.hasVertices && rwGeometry.vertexInformation.length > 0 ? rwGeometry.vertexInformation : undefined;
     const rwNormalsArray: RwVector3[] = rwGeometry.hasNormals && rwGeometry.normalInformation.length > 0 ? rwGeometry.normalInformation : undefined;
-    const rwBinMesh: RwBinMesh = rwGeometry.binMesh && rwGeometry.binMesh.meshes.length > 0 ? rwGeometry.binMesh : undefined;
+    if (!rwGeometry.binMesh) {
+      rwGeometry.binMesh = this.createBinMesh(rwGeometry);
+    }
+    const rwBinMesh: RwBinMesh = rwGeometry.binMesh;
 
-    if (rwTextureInfo == undefined || rwUvsArray == undefined || rwVerticesArray == undefined || rwBinMesh == undefined) {
+    if (rwTextureInfo == undefined || rwUvsArray == undefined || rwVerticesArray == undefined) {
       throw new Error(`Invalid .dff file.`);
     }
 
@@ -91,9 +94,18 @@ export class DffConverter {
       uvs[i * 2 + 1] = uv.v;
     });
 
-    const sharedIndicesArray: number[] = [];
-    rwGeometry.binMesh.meshes.forEach((mesh) => { sharedIndicesArray.push(...mesh.indices) });
-    const indices: Uint32Array = new Uint32Array(sharedIndicesArray);
+    let totalIndices = 0;
+    rwBinMesh.meshes.forEach(mesh => {
+      totalIndices += mesh.indices.length;
+    });
+
+    const indices = new Uint32Array(totalIndices);
+    let offset = 0;
+
+    rwBinMesh.meshes.forEach(mesh => {
+      indices.set(mesh.indices, offset);
+      offset += mesh.indices.length;
+    });
 
     let normals = undefined;
 
@@ -176,6 +188,34 @@ export class DffConverter {
     this._scene.addChild(this._meshNode);
   }
 
+  private createBinMesh(rwGeometry: RwGeometry): RwBinMesh {
+    const meshes: RwMesh[] = []; 
+    const materialGroups: Record<number, number[]> = {};
+
+    for (const rwTriangle of rwGeometry.triangleInformation) {
+      if (!materialGroups[rwTriangle.materialId]) {
+        materialGroups[rwTriangle.materialId] = [];
+      }
+
+      materialGroups[rwTriangle.materialId].push(rwTriangle.vector.x, rwTriangle.vector.y, rwTriangle.vector.z);
+    }
+
+    Object.keys(materialGroups).map(key => {
+      const materialId = parseInt(key);
+      materialGroups[materialId]
+      meshes.push({ 
+        materialIndex: materialId, 
+        indexCount: materialGroups[materialId].length, 
+        indices: [...materialGroups[materialId]] });
+    });
+    meshes.sort((a, b) => a.materialIndex - b.materialIndex);
+
+    return { 
+      meshCount: meshes.length, 
+      meshes: meshes
+     };
+  }
+
   private createMaterial(rwGeometry: RwGeometry, rwPrimitive: RwMesh): Material {
     const materialIndex = rwPrimitive.materialIndex;
     const rwMaterial = rwGeometry.materialList.materialData[materialIndex];
@@ -224,20 +264,20 @@ export class DffConverter {
     try {
       const skin = this._doc.createSkin('Skin');
       this._meshNode.setSkin(skin);
-      const rwFrames = rwDff.frameList.frames;
+      const rwFrames = rwDff.clumps[0].frameList.frames;
       const bones: Node[] = [];
 
       // Adding bones to table
       let bonesTable: Bone[] = [];
       const order: number[] = [];
-      for (const animNode of rwDff.animNodes) {
+      for (const animNode of rwDff.clumps[0].animNodes) {
         if (animNode.bonesCount > 0) {
           for (let i = 0; i < animNode.bones.length; i++) {
             const bone = animNode.bones[i];
             bonesTable.push({
-              name: rwDff.dummies[rwDff.versionNumber == RwVersion.SA ? i : i + 1], // +1 for VC
+              name: rwDff.clumps[0].dummies[rwDff.versionNumber == RwVersion.SA ? i : i + 1], // +1 for VC
               boneData: {
-                boneId: rwDff.animNodes[rwDff.versionNumber == RwVersion.SA ? i : i + 1].boneId, // +1 for VC
+                boneId: rwDff.clumps[0].animNodes[rwDff.versionNumber == RwVersion.SA ? i : i + 1].boneId, // +1 for VC
                 boneIndex: bone.boneIndex + 1,
                 flags: bone.flags,
               },
@@ -323,7 +363,7 @@ export class DffConverter {
 
       // IBM
       let inverseBindMatrices: number[] = [];
-      const rwInverseBindMatrices = rwDff.geometryList.geometries[0].skin.inverseBoneMatrices;
+      const rwInverseBindMatrices = rwDff.clumps[0].geometryList.geometries[0].skin.inverseBoneMatrices;
       for (let ibm of rwInverseBindMatrices) {
         inverseBindMatrices.push(
           ibm.right.x, ibm.right.y, ibm.right.z, ibm.right.t,
