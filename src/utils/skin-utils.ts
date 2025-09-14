@@ -38,20 +38,36 @@ export function normalizeJoints(jointsData: number[], weightsData: number[]): nu
 }
 
 export function normalizeWeights(weightsData: number[]): number[] {
-  let w1 = weightsData[0];
-  let w2 = weightsData[1];
-  let w3 = weightsData[2];
-  let w4 = weightsData[3];
-  const sum = w1 + w2 + w3 + w4;
-
-  if (sum === 0) {
-    w1 = 1.0;
-  } else if (Math.abs(sum - 1.0) > 0.001) {
-    w1 /= sum;
-    w2 /= sum;
-    w3 /= sum;
-    w4 /= sum;
+  const [w1, w2, w3, w4] = weightsData;
+  const totalWeightSum = w1 + w2 + w3 + w4;
+  const zeroThreshold = 0.000001;
+  if (Math.abs(totalWeightSum) < zeroThreshold) {
+    return [1.0, 0.0, 0.0, 0.0];
   }
 
-  return [w1, w2, w3, w4];
+  const inverseWeightSum = 1.0 / totalWeightSum;
+  
+  let normalizedWeight1 = w1 * inverseWeightSum;
+  let normalizedWeight2 = w2 * inverseWeightSum;
+  let normalizedWeight3 = w3 * inverseWeightSum;
+  
+  let normalizedWeight4 = 1.0 - (normalizedWeight1 + normalizedWeight2 + normalizedWeight3);
+
+  if (normalizedWeight1 < 0 && normalizedWeight1 > -zeroThreshold) normalizedWeight1 = 0;
+  if (normalizedWeight2 < 0 && normalizedWeight2 > -zeroThreshold) normalizedWeight2 = 0;
+  if (normalizedWeight3 < 0 && normalizedWeight3 > -zeroThreshold) normalizedWeight3 = 0;
+  if (normalizedWeight4 < 0 && normalizedWeight4 > -zeroThreshold) normalizedWeight4 = 0;
+
+  const finalWeightSum = normalizedWeight1 + normalizedWeight2 + normalizedWeight3 + normalizedWeight4;
+  const normalizationThreshold = 0.00001;
+  
+  if (Math.abs(finalWeightSum - 1.0) > normalizationThreshold) {
+    const finalInverseSum = 1.0 / finalWeightSum;
+    normalizedWeight1 *= finalInverseSum;
+    normalizedWeight2 *= finalInverseSum;
+    normalizedWeight3 *= finalInverseSum;
+    normalizedWeight4 *= finalInverseSum;
+  }
+  
+  return [normalizedWeight1, normalizedWeight2, normalizedWeight3, normalizedWeight4];
 }

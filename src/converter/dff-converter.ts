@@ -202,7 +202,6 @@ export class DffConverter {
 
     Object.keys(materialGroups).map(key => {
       const materialId = parseInt(key);
-      materialGroups[materialId]
       meshes.push({ 
         materialIndex: materialId, 
         indexCount: materialGroups[materialId].length, 
